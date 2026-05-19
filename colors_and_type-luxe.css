@@ -1,0 +1,61 @@
+/* ============================================================
+   SignPro — LUXE variant
+   ------------------------------------------------------------
+   An editorial reskin of the SignPro design language: warm
+   parchment cream, deep ink, antique brass accent. Sharp
+   corners, hairline rules, big italic serif display.
+   Use this for premium / agency-facing surfaces.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root.luxe, .luxe {
+    /* ---------- INK ---------- */
+    --luxe-ink:        #14110E;   /* primary text, dark surfaces */
+    --luxe-ink-2:      #3A352D;   /* secondary text */
+    --luxe-ink-3:      #6E6657;   /* tertiary text, captions */
+
+    /* ---------- PAPER ---------- */
+    --luxe-cream:      #F4ECD8;   /* app background, parchment */
+    --luxe-paper:      #FBF8EF;   /* card / surface */
+    --luxe-bone:       #E8DFC8;   /* subtle tint, hover ground */
+    --luxe-rule:       #D8CFB5;   /* hairline rule */
+
+    /* ---------- ACCENT ---------- */
+    --luxe-brass:       #A07E3C;  /* primary accent */
+    --luxe-brass-deep:  #7E602B;  /* hover */
+    --luxe-brass-soft:  rgba(160, 126, 60, 0.12);
+
+    /* ---------- SEMANTIC ---------- */
+    --luxe-seal-green:  #2D4A36;
+    --luxe-seal-green-soft: rgba(45, 74, 54, 0.10);
+    --luxe-seal-red:    #7A2A1E;
+    --luxe-seal-red-soft: rgba(122, 42, 30, 0.10);
+    --luxe-amber:       #B5853F;
+    --luxe-amber-soft:  rgba(181, 133, 63, 0.12);
+
+    /* ---------- FONT FAMILIES ---------- */
+    --luxe-serif: 'Instrument Serif', 'Cormorant Garamond', Garamond, 'Times New Roman', serif;
+    --luxe-sans:  'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --luxe-mono:  'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+    /* ---------- TYPE TOKENS ---------- */
+    --luxe-display:    72px;   /* hero serif */
+    --luxe-h1:         48px;   /* serif italic */
+    --luxe-h2:         28px;
+    --luxe-h3:         18px;
+    --luxe-body:       15px;
+    --luxe-small:      13px;
+    --luxe-caption:    11px;
+    --luxe-tracking-caps: 0.18em;
+
+    /* ---------- GEOMETRY ---------- */
+    --luxe-radius:       2px;   /* sharper than utility kit */
+    --luxe-radius-pill:  999px;
+    --luxe-rule-w:       1px;
+    --luxe-rule-style:   solid;
+
+    /* ---------- SHADOW ---------- */
+    --luxe-shadow-page:   0 1px 0 var(--luxe-rule);
+    --luxe-shadow-lift:   0 24px 48px -24px rgba(20, 17, 14, 0.15);
+}

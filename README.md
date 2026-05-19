@@ -1,275 +1,261 @@
-# SignPro - Legal Document Signing Platform
+# Handoff: SignPro Design System
 
-Production-grade electronic signature platform for legally binding documents (NDAs, contracts, agreements) with PDF/DOCX support, multi-channel delivery (SMTP + Twilio SMS), tamper-evident audit trails, and a companion Manifest V3 browser extension for real-time signing notifications.
+## Overview
 
-## Architecture
+A complete design system for SignPro, the electronic-signature platform for legally binding documents. This bundle contains two visual directions and a full UI kit, intended to live alongside the existing codebase at [`msajeeb003/SignPro`](https://github.com/msajeeb003/SignPro).
 
-```
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│   React App      │────│  Express API     │────│   PostgreSQL     │
-│  (Vite, port     │    │  (Node 20,       │    │   (schema +      │
-│   3000)          │    │   port 4000)     │    │   audit chain)   │
-└──────────────────┘    └────────┬─────────┘    └──────────────────┘
-                                 │
-                  ┌──────────────┼──────────────────┐
-                  │              │                  │
-            ┌─────▼─────┐  ┌─────▼─────┐    ┌──────▼──────┐
-            │  SMTP     │  │  Twilio   │    │  Browser    │
-            │  (any)    │  │  (SMS)    │    │  Extension  │
-            └───────────┘  └───────────┘    │  (MV3)      │
-                                            └─────────────┘
-```
+The package documents:
+1. **The current visual language**, reverse-engineered from `frontend/src/styles.css` — primary blue `#2563eb`, system sans, 6 px corners, flat utility look.
+2. **A "Luxe" reskin** — an editorial alternative using Instrument Serif + parchment/ink/brass, intended for premium/marketing surfaces or as a possible product redesign direction.
 
-## Project Layout
+## About the Design Files
+
+The files in this bundle are **design references created in HTML** — prototypes showing intended look and behavior, not production code to copy directly.
+
+The task is to **recreate these HTML designs in the SignPro target codebase** (React + Vite + react-router) using its established patterns. The utility variant *already lives* in the codebase — these files largely mirror what's there. The Luxe variant is a *proposed* direction; if you implement it, do so as a theme variant rather than a wholesale replacement (keep the utility look behind a feature flag or build-time switch).
+
+## Fidelity
+
+**High-fidelity.** Pixel-perfect mockups with final colors, typography, spacing, and interactions. Implement them using the existing React component patterns in `frontend/src/`, lifting the exact tokens from `colors_and_type.css` (utility) or `colors_and_type-luxe.css` (luxe).
+
+## Repository placement
+
+Drop the entire `design_handoff_signpro_design_system/` folder into the SignPro repo root, then move/rename:
 
 ```
 SignPro/
-├── backend/                     # Node.js + Express API
-│   ├── src/
-│   │   ├── config/              # DB + env config
-│   │   ├── db/schema.sql        # PostgreSQL schema (all tables, indexes, triggers)
-│   │   ├── middleware/          # auth, rate limiting, error handling
-│   │   ├── routes/              # API route handlers
-│   │   ├── services/            # Business logic (parsing, signing, email, SMS)
-│   │   └── utils/               # crypto, logger, validators
-│   ├── Dockerfile
-│   └── package.json
-├── frontend/                    # React (Vite) - signing UI, dashboard
-│   ├── src/{pages,services}
-│   └── package.json
-├── extension/                   # Chrome MV3 browser extension
-│   ├── manifest.json
-│   ├── background.js            # Service worker - polling, notifications
-│   ├── popup.{html,js,css}      # Toolbar popup
-│   └── options.{html,js,css}    # Settings page
-└── docker-compose.yml
+├── design-system/                    ← rename "design_handoff_..." to this
+│   ├── README.md                     ← full system documentation
+│   ├── SKILL.md                      ← Agent-Skills entry
+│   ├── colors_and_type.css
+│   ├── colors_and_type-luxe.css
+│   ├── assets/
+│   ├── preview/                      ← 24 reviewable design cards
+│   └── ui_kits/webapp/
+└── frontend/                         ← (existing)
 ```
 
-## Step 1: Database & Backend
+Commit message suggestion: `design: add design system + luxe variant (#design-system)`.
 
-### Database schema highlights (`backend/src/db/schema.sql`)
+---
 
-| Table                      | Purpose                                                                |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `users`                    | Accounts, hashed passwords, MFA fields, lockout tracking               |
-| `user_sessions`            | Refresh-token records with HMAC hashes and device info                 |
-| `smtp_configurations`      | Per-user SMTP settings with AES-256-GCM encrypted credentials          |
-| `documents`                | PDFs/DOCXs with hash, page count, dimensions, status state-machine    |
-| `signature_requests`       | Per-recipient signing tokens, expiry, sign metadata, verification codes|
-| `signature_coordinates`    | Field placements (x/y/width/height) on each page                       |
-| `signature_evidence`       | Cryptographic proof: signed-doc hash + HMAC + consent + IP + UA + geo  |
-| `audit_trails`             | Immutable append-only log with hash-chained entries                    |
-| `notification_logs`        | Email/SMS/extension delivery records with retries                      |
-| `extension_tokens`         | Long-lived hashed tokens for browser-extension polling                 |
-| `webhook_subscriptions`    | Outbound webhooks for third-party integrations                         |
+## Screens / Views
 
-All tables auto-update `updated_at`; the `audit_trails` table has a `BEFORE UPDATE OR DELETE` trigger that raises an exception so audit data is provably append-only. Indexes cover the hot paths (status filters, signer lookups, polling).
+### A. Utility kit (default — codebase-faithful)
 
-### API Routes
+Five views forming a click-thru: **Login → Dashboard → Upload → Document detail → Sign**.
 
-#### Authentication (`/api/auth`)
-- `POST /register` - Create account
-- `POST /login` - Email/password, returns JWT + refresh token; lockout after 10 failed attempts
-- `POST /refresh` - Rotate access token
-- `POST /logout` - Revoke session
-- `GET  /me` - Current user
-- `POST /extension-token` - Mint a 90-day token for the browser extension
-- `DELETE /extension-token/:id` - Revoke an extension token
+#### A.1 Login
+- **Purpose:** Sender authentication.
+- **Layout:** Centered card on `--bg` page (`#f9fafb`). Card 400 px wide, `padding: 32px`, `border-radius: 8px`, `border: 1px solid #e5e7eb`, `box-shadow: 0 1px 3px rgba(0,0,0,0.05)`. Form stacks `email`, `password`, `Sign in` primary button (full-width, `padding: 12px 24px`). Below form: "Don't have an account? Register" at `font-size: 13px`, color `#6b7280`.
+- **Source:** `ui_kits/webapp/pages/LoginPage.jsx` (proto) ↔ `frontend/src/pages/LoginPage.jsx` (real).
 
-#### Documents (`/api/documents`)
-- `POST /upload` - Multipart upload (PDF/DOCX, max 25 MB); auto-parses
-- `POST /:id/parse` - Re-parse on demand
-- `GET  /` - List documents
-- `GET  /:id` - Document detail + signature requests
-- `GET  /:id/pages` - Rendered page images + metadata
-- `GET  /:id/download?variant=signed|original` - Download
-- `DELETE /:id` - Void document
-- `GET  /:id/history` - Audit trail
+#### A.2 Dashboard
+- **Purpose:** Sender lists, filters, and opens documents.
+- **Layout:** Top nav (12 / 24 padding, 1 px hairline bottom). Main content max-width 1200 px, 32 / 24 padding. Page header: `h1` 24 / 600 + primary action right (`Upload Document`). Status `<select>` filter. Documents `<table>`: uppercase 12 / 600 column headers on `#f9fafb`, 13 px rows, 12 px cell padding, hairline row dividers, status as **`.status status-{state}` pill** (11 / 600, 10 % tint background, 12 px radius).
+- **States:** filter is client-only; row click opens `/documents/:id`.
 
-#### Signatures (`/api/signatures`)
-- `POST /requests` - Create signature requests with coordinate fields and dispatch
-- `GET  /session/:token` - Load a signing session (public, token-gated)
-- `GET  /session/:token/pages` - Get rendered pages for signer
-- `POST /session/:token/complete` - Submit signature + values + consent
-- `POST /session/:token/decline` - Decline to sign
-- `POST /:id/resend` - Resend email/SMS for a pending request
-- `DELETE /:id` - Cancel a pending request
-- `POST /verify` - Verify signed document integrity via HMAC
+#### A.3 Upload
+- **Purpose:** PDF/DOCX file picker + title.
+- **Layout:** Form (max-width 600 px) with title input, file picker row, auto-parse checkbox, progress bar (8 px, primary fill, 0.2 s transition), Cancel / Upload buttons right-aligned.
+- **Constraints (real):** 25 MB max, 500 pages max — display in `.meta` line under the h1.
 
-#### SMTP (`/api/smtp`)
-- `GET /` - List user's SMTP configurations
-- `POST /` - Create (auto-verifies the connection by default)
-- `PUT /:id` - Update
-- `POST /:id/test` - Send a real test email
-- `POST /:id/set-default` - Set default config
-- `DELETE /:id` - Remove
+#### A.4 Document detail
+- **Purpose:** Inspect a document, see signature requests, send for signature, void.
+- **Layout:** Page header with back link, h1 title, meta line (`PDF · 4 pages · uploaded May 14`), and action cluster (`Download`, `Send for signature` (primary), `Void document` (danger)). Signature-requests card uses a 4-column grid `(name+email) (status pill) (timestamp muted) (actions)`. Page-preview grid 200 px cards with `aspect-ratio: 8.5/11`.
+- **"Send for signature" modal:** dark scrim (`rgba(0,0,0,0.5)`), 600 px modal, 8 px radius. Recipient `<fieldset>` blocks with legend; add/remove buttons are `.btn-link`. Footer: Cancel + primary "Send to N recipients".
 
-#### SMS (`/api/sms`)
-- `POST /send` - Send an arbitrary SMS via Twilio
-- `POST /signature-request/:id` - Send signature SMS for an existing request
+#### A.5 Sign (public)
+- **Purpose:** Recipient draws signature, accepts consent, submits.
+- **Layout:** No nav (full-bleed). Header band with title, sender line, blockquote message (3 px left border `--primary`). Body is a 2-col grid `1fr 320–340 px`. Left: document page (white paper, hairline border, `shadow-page`), with a `.field-overlay` (2 px dashed `--primary`, 8 % tint) at the signature spot. Right sticky sidebar: numbered field list, signature canvas (300×120), consent checkbox row, full-width primary "Submit signature".
+- **Complete state:** swap to centered "Document signed" card with success-green h1, evidence hash + ID in `<code>`.
 
-#### Webhooks - Extension & external (`/api/webhooks`)
-- `GET  /extension/poll` - Browser extension polls here (extension token auth)
-- `POST /extension/notifications/read` - Mark notifications read
-- `POST /extension/heartbeat` - Keepalive for connection state
-- `POST /twilio/status` - Twilio delivery callback
-- `POST /email/bounce` - Generic email bounce webhook
-- `GET/POST /subscriptions` - Manage outbound webhooks
+### B. Luxe variant (editorial)
 
-#### Notifications (`/api/notifications`)
-- `GET /` - List notifications for current user
-- `GET /unread-count` - Badge counter
-- `POST /:id/read` - Mark single notification read
+Same product information architecture, different visual register. One HTML file (`index-luxe.html`) renders the **Dashboard** and **Sign page** with a Tweaks panel for live palette + serif swap.
 
-### Environment Configuration
+#### B.1 Luxe Dashboard
+- **Top bar:** 3-col grid (nav links left, brand center, account right). Brand `Sign<em>Pro</em>` — "Pro" italic in `--luxe-brass`. Active nav link gets a 1 px brass underline.
+- **Hero:** Editorial. Left: eyebrow caps "DOCUMENTS · TUESDAY, MAY 19", a 72 px serif headline with italic-brass emphasis ("Three documents <em>await</em> your countersign."), lede paragraph in `--luxe-ink-2`. Right: 2×2 stats grid where each value uses 44 px Instrument Serif with italic numerals.
+- **Filter strip:** Inline tab list with italic-brass counts; right-aligned search input with underline-only styling.
+- **Document rows:** No table chrome. Each row is `46% / 1fr / 1fr / 1fr / auto`, 24 px vertical padding, hairline divider. Title is 22 px serif Roman. Parties is 17 px serif italic ink-2. Signer avatars are 28 px circles with initials, signed ones use the green tint, current user uses brass. Status is `<span class="lstatus {state}">` — small serif italic with a 6 px dot before it. "Open →" right-aligned in serif italic.
 
-Copy `backend/.env.example` to `backend/.env`. Key variables:
+#### B.2 Luxe Sign page
+- **Layout:** `1fr 380 px` 2-col grid, 56 px gap. Left: doc title 56 px serif with italic-brass emphasis, sender line, italic-serif quote with brass left rule. Below that the **paper card** (`--luxe-paper`, 1 px rule, `box-shadow: 0 24px 48px -24px rgba(20,17,14,0.15)`, 56/64 padding). The paper renders the NDA body in serif Roman, centered uppercase title with 0.08em tracking, justified text. A signature line sits absolutely at the bottom with a script-font name on a 1 px ink underline + uppercase caps label.
+- **Right (sticky 32 px top) sign panel:** caps label + italic "Three steps remain." h2. Step list with Roman-numeral indices in italic serif (`i`, `ii`, `iii`) — green when done. Signature canvas (`--luxe-paper` bg, 1 px rule, 2 px ink bottom border, ink 2.2 px stroke). Consent with italic-brass opening quote mark. Brass full-width submit. Footer caps: "Bound by HMAC · SHA-256 chained".
 
-```env
-DATABASE_URL=postgresql://signpro:signpro_password@localhost:5432/signpro
-JWT_SECRET=...                  # >= 32 chars, randomly generated
-SIGNATURE_HMAC_SECRET=...       # >= 32 chars, separate from JWT
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=you@example.com
-SMTP_PASS=your_app_password
-TWILIO_ACCOUNT_SID=ACxxxxxx...
-TWILIO_AUTH_TOKEN=xxx
-TWILIO_PHONE_NUMBER=+15551234567
+#### B.3 Luxe Footer
+- Three-column caps strip: brand line · compliance badges · encryption note. 28 / 56 padding, hairline top.
+
+---
+
+## Interactions & Behavior
+
+### Utility kit
+- All navigation is `react-router` (`useNavigate`, `<Link>`). The prototype's `view` state corresponds 1:1 to real routes.
+- Status filter is a `<select>` posting `?status=` query — server-side filtered.
+- Send-for-signature modal: ESC closes; clicking scrim closes; on submit `POST /api/signatures/requests` with body `{ document_id, recipients: [...], message, coordinates: [...] }`.
+- Signature canvas: `react-signature-canvas` in real, hand-rolled `<canvas>` in the proto. Output is a PNG data URL stored in `signature_evidence`.
+- Hover / focus: never opacity. Color shifts and 3 px focus ring `0 0 0 3px rgba(37,99,235,0.10)` everywhere a control can be focused.
+
+### Luxe kit
+- **Tweaks panel** controls 3 things via `useTweaks()`:
+  - `palette` — one of `warm | ink | sage | blush` → applies `.palette-{name}` class to `<html>`, which redefines `--luxe-*` CSS vars.
+  - `serif` — display family. Loads from Google Fonts on demand. Updates `--luxe-serif`.
+  - `view` — `dashboard | sign`. Drives view switch.
+- **Row hover** on dashboard: background `rgba(232, 223, 200, 0.4)`, 120 ms ease.
+- **Sign canvas:** DPR-aware (multiplies `canvas.width` by `devicePixelRatio`, scales context). Stroke color reads `--luxe-ink` from `getComputedStyle(document.documentElement)` so it reflects palette changes.
+- **Submit button:** brass background, disabled until canvas has strokes AND consent checked.
+
+---
+
+## State Management
+
+### Utility kit
+- `useAuth()` context (in `frontend/src/services/auth.jsx`) — `{ user, loading, login, logout }`.
+- Page-local `useState` for documents list, modal open, signature data.
+- Server is source of truth; client refetches on filter change.
+
+### Luxe kit
+- `useTweaks({palette, serif, view})` for theme + view state, persists via `__edit_mode_set_keys` postMessage.
+- Local `useState` for `hasSig` and `consent` on the sign view.
+
+---
+
+## Design Tokens
+
+### Utility (`colors_and_type.css`)
+
+```
+Colors
+  --primary        #2563eb     primary CTA, link, focus
+  --primary-hover  #1d4ed8     button :hover
+  --success        #16a34a     completed / signed
+  --warning        #f59e0b     pending
+  --danger         #dc2626     declined / void
+  --bg             #f9fafb     app background
+  --card           #ffffff     surface
+  --border         #e5e7eb     1 px hairline
+  --text           #111827     primary text
+  --text-secondary #6b7280     secondary
+  --text-tertiary  #9ca3af     placeholder
+
+Semantic tints
+  10% of any color = pill/banner fill
+  30% of any color = banner border
+
+Type (Geist substitute for native system stack)
+  h1 24 / 600 / 1.25 / -0.01em
+  h2 20 / 600 / 1.30 / -0.005em
+  h3 16 / 600 / 1.40
+  body 14 / 400 / 1.50
+  sm 13 / 400
+  xs 12 / 500 (labels)
+  overline 12 / 600 uppercase 0.04em tracking
+  pill 11 / 600 uppercase 0.04em tracking
+  mono 12 (Geist Mono / SF Mono)
+
+Spacing (4 px grid)  4 · 8 · 12 · 16 · 20 · 24 · 32 · 48
+Radii                4 (sm) · 6 (default) · 8 (md) · 12 (pill)
+Shadows
+  shadow-card   0 1px 3px rgba(0,0,0,0.05)   auth + complete cards
+  shadow-page   0 1px 3px rgba(0,0,0,0.04)   document pages
+  shadow-focus  0 0 0 3px rgba(37,99,235,0.10)
 ```
 
-## Step 2: Document Ingestion & Rendering
+### Luxe (`colors_and_type-luxe.css`)
 
-`backend/src/services/pdfParser.js` and `docxParser.js` handle ingestion:
+```
+Ink scale
+  --luxe-ink        #14110E   primary text
+  --luxe-ink-2      #3A352D   secondary
+  --luxe-ink-3      #6E6657   tertiary, caps
 
-- **PDF**: `pdf-lib` parses metadata + dimensions; `pdfjs-dist` extracts text; an optional canvas backend (`@napi-rs/canvas` or `canvas`) renders each page to base64 PNG. If no canvas backend is installed, parsing still succeeds with text/metadata only and the frontend shows a placeholder.
-- **DOCX**: `mammoth` extracts text + HTML, then `pdf-lib` generates a paginated intermediate PDF (with proper word-wrap and heading detection). The intermediate PDF feeds back into the PDF pipeline for rendering and signing.
+Paper scale (default "warm")
+  --luxe-cream      #F4ECD8   app background
+  --luxe-paper      #FBF8EF   card / surface
+  --luxe-bone       #E8DFC8   hover ground
+  --luxe-rule       #D8CFB5   hairline
 
-The parser returns a unified structure:
-```js
-{
-  pageCount: 5,
-  pages: [{ pageNumber, width, height, rotation, textContent, renderedBase64 }],
-  metadata: { title, author, ... },
-  fullText: '...',
-  isEncrypted: false,
-  fileSize: 12345
-}
+Accent
+  --luxe-brass      #A07E3C   primary accent
+  --luxe-brass-deep #7E602B   hover
+
+Semantic
+  --luxe-seal-green #2D4A36   signed / completed
+  --luxe-seal-red   #7A2A1E   declined / void
+  --luxe-amber      #B5853F   pending
+
+Alternate palettes (apply class to html / body)
+  .palette-ink   — dark mode (cream #0E0F12, brass #D4A24C, …)
+  .palette-sage  — forest accent #3D5A3D
+  .palette-blush — rust accent  #9C4F3C
+
+Type
+  display  72 px Instrument Serif 400, lh 1.04, tracking -0.015em
+  h1       48 px Instrument Serif 400, italic for emphasis
+  h2       28 px Instrument Serif
+  h3       18 px Geist 500
+  body     15 px Geist 400 / 1.55
+  small    13 px Geist
+  caption  11 px Geist 500 uppercase, 0.18em tracking
+  mono     13 px JetBrains Mono
+
+Geometry
+  radius        2 px (sharper than utility)
+  rule width    1 px
+  shadow-lift   0 24px 48px -24px rgba(20,17,14,0.15)   modal-feel cards
 ```
 
-### Error handling
+---
 
-| Code              | Cause                                             | HTTP |
-| ----------------- | ------------------------------------------------- | ---- |
-| `PDF_ENCRYPTED`   | Password-protected PDF (rejected with clear msg)  | 422  |
-| `PDF_CORRUPTED`   | Malformed PDF stream                              | 422  |
-| `PDF_EMPTY`       | Zero pages                                        | 422  |
-| `PDF_TOO_LARGE`   | > 500 pages                                       | 422  |
-| `DOCX_CORRUPTED`  | Invalid zip / signature                           | 422  |
-| `DOCX_EMPTY`      | No extractable text                               | 422  |
-| `UNSUPPORTED_FORMAT` | MIME type not in allowlist                    | 415  |
-| `FILE_TOO_LARGE`  | Exceeds `MAX_FILE_SIZE_MB`                        | 413  |
+## Assets
 
-### Coordinate system
+| File | Purpose | Source |
+|---|---|---|
+| `assets/wordmark.svg` | Text "SignPro" wordmark | Generated; replace with real wordmark if you have one |
+| `assets/badge.svg` | Solid blue "S" badge (favicon, extension icon) | Generated placeholder; the repo README notes the extension icons are placeholder solid-blue squares |
 
-The signing UI uses **top-left origin** (web convention). Fields are stored with `page_width`/`page_height` so they can be scaled to any rendering size. When embedding signatures into the final PDF, `signatureService.embedSignaturesIntoPdf` converts to pdf-lib's bottom-left origin: `pdfY = pageHeight - y - height`. This keeps the frontend simple while producing visually correct signed PDFs.
+The codebase has **no icon set** of its own. For mocks the Luxe kit substitutes nothing — text glyphs only. Utility kit recommends **Lucide** via CDN at 1.5 px stroke if icons are needed.
 
-## Step 3: Browser Extension (Manifest V3)
+**Fonts** are loaded from Google Fonts in `colors_and_type.css` (Geist + Geist Mono) and `colors_and_type-luxe.css` (Instrument Serif + Geist + JetBrains Mono). If you need offline fonts, mirror these into `frontend/public/fonts/` and switch the `@import` to `@font-face`.
 
-`extension/manifest.json` declares minimum permissions (`storage`, `notifications`, `alarms`) and a strict CSP. The extension consists of:
+---
 
-- **`background.js`** (service worker): Holds the session, registers a `chrome.alarms` polling schedule (default 1 min), calls `/api/webhooks/extension/poll`, deduplicates notifications via `chrome.storage.local`, updates the action badge, and handles notification clicks (open signing URL in a new tab).
-- **`popup.{html,js,css}`**: Toolbar popup listing pending signature requests with one-click "Sign now" buttons. Shows connection state, last-poll time, and a refresh button. Speaks to the background via `chrome.runtime.sendMessage`.
-- **`options.{html,js,css}`**: Setup page where the user pastes their API URL, frontend URL, and extension token. Verifies the credentials by hitting `/api/webhooks/extension/heartbeat` before saving the session.
+## Files in this bundle
 
-### Storage strategy
-- `chrome.storage.sync` for the session blob (token + URLs) - syncs across the user's signed-in browsers.
-- `chrome.storage.local` for poll state and deduplication keys - kept local-only because it's large/volatile.
-
-### Security
-- The extension token is stored via `chrome.storage.sync` (encrypted by Chrome's profile sync).
-- All API calls include `X-SignPro-Extension: 1` and `Authorization: Bearer <token>`.
-- The CSP forbids inline scripts and remote script loading: `script-src 'self'; object-src 'none'`.
-- Rate limiting on the server (`extensionPollLimiter`) caps polls at 30/min per token.
-
-### Installing the extension
-
-1. Generate placeholder icons (already provided as solid blue squares; replace `extension/icons/icon-*.png` with branded versions).
-2. `chrome://extensions` → **Developer mode** → **Load unpacked** → select `extension/`.
-3. Open the SignPro dashboard → Settings → Browser Extension → **Generate Token** → copy.
-4. Click the extension icon → Settings → enter API URL, frontend URL, paste token → **Connect**.
-
-## Setup & Run
-
-### Quick start (Docker)
-
-```bash
-git clone <repo> && cd SignPro
-cp backend/.env.example backend/.env  # edit JWT_SECRET, SMTP, Twilio
-docker-compose up --build
+```
+design_handoff_signpro_design_system/
+├── README.md                       ← this file
+├── SKILL.md                        ← Agent-Skills metadata (works in Claude Code)
+├── colors_and_type.css             ← utility tokens
+├── colors_and_type-luxe.css        ← luxe tokens
+├── assets/
+│   ├── wordmark.svg
+│   └── badge.svg
+├── preview/                        ← 24 review cards (colors, type, spacing, components, brand) for both variants
+└── ui_kits/webapp/
+    ├── README.md
+    ├── index.html                  ← utility kit click-thru
+    ├── index-luxe.html             ← luxe kit (single HTML w/ tweaks panel)
+    ├── tweaks-panel.jsx
+    ├── components.jsx              ← utility kit shared components
+    └── pages/
+        ├── LoginPage.jsx
+        ├── DashboardPage.jsx
+        ├── UploadPage.jsx
+        ├── DocumentDetailPage.jsx
+        └── SignPage.jsx
 ```
 
-The schema is applied automatically on first run via the `01-schema.sql` mount.
+---
 
-### Manual setup
+## Implementation notes for Claude Code
 
-```bash
-# 1. PostgreSQL
-createdb signpro
-psql signpro < backend/src/db/schema.sql
+1. **Start with the utility kit** — it mirrors what's already in `frontend/src/`, so the diff is mostly token extraction. Pull the tokens from `colors_and_type.css` into a new file at `frontend/src/styles/tokens.css` and `@import` it from `frontend/src/styles.css`. Replace literal hex values throughout `styles.css` with `var(--…)`.
+2. **Use the Luxe variant as a theme**, not a rewrite. Wrap it with a `[data-theme="luxe"]` selector at `<html>`. Build a tiny `ThemeSwitcher` in the Settings page that toggles `data-theme`. The Luxe palette tweaks already work via class names — keep that pattern.
+3. **Speaker for the team:** the Luxe kit adds *Templates* and *Audit log* nav entries that don't have backing screens. Either build them or remove them from the nav for now.
+4. **Verify accessibility:** brass on cream is ~3.7:1 — fine for large text and UI elements, **not** AA for body text. Body text must remain ink (`#14110E`) on cream (`#F4ECD8`) which is 14.5:1. Don't let brass creep into body copy.
+5. **Open the prototypes locally** before implementing: `cd ui_kits/webapp && python3 -m http.server 8080` then visit `http://localhost:8080/index-luxe.html`. The Tweaks panel won't appear without a host shell, but you can hard-code the `palette-*` class on `<html>` to compare palettes.
 
-# 2. Backend
-cd backend
-cp .env.example .env  # edit secrets
-npm install
-npm run dev           # http://localhost:4000
-
-# 3. Frontend (separate terminal)
-cd ../frontend
-npm install
-npm run dev           # http://localhost:3000
-
-# 4. Extension - load extension/ unpacked at chrome://extensions
-```
-
-### Generating production secrets
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-Use the output for `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, and `SIGNATURE_HMAC_SECRET` (three different values).
-
-### Optional: enable PDF page rendering
-
-Server-side PDF rendering requires a canvas backend. Without one, parsing still works (text/metadata) but page previews are unavailable.
-
-```bash
-cd backend
-npm install @napi-rs/canvas    # recommended - prebuilt binaries, no native deps
-# OR
-npm install canvas             # requires cairo/pango on the host
-```
-
-## Security Notes
-
-- **Passwords**: bcrypt with 12 rounds (configurable via `BCRYPT_ROUNDS`).
-- **Tokens**: JWT for short-lived access (24h), HS256. Refresh tokens are stored hashed (HMAC) in `user_sessions` so a DB leak doesn't grant access.
-- **SMTP credentials**: AES-256-GCM encryption at rest using `SIGNATURE_HMAC_SECRET` (use a dedicated key in production).
-- **Signature integrity**: Each signed document gets a SHA-256 hash and an HMAC over `(request_id|document_id|hash|signer_email)`. The HMAC is exposed for third-party verification via `POST /api/signatures/verify`.
-- **Audit chain**: Each `audit_trails` row's `chain_hash` is `SHA-256(prev_chain_hash || event_payload)`, making post-hoc tampering detectable.
-- **CSP**: Helmet configured with strict CSP, frame-ancestors `'none'`, and a strict CORS allowlist (web app origin + chrome-extension://).
-- **Rate limits**: 200 req / 15 min global, 10 auth attempts / 15 min, 50 uploads / hour, 30 extension polls / min.
-- **Input validation**: `express-validator` on every mutating route; signature field coordinates validated against the document's page dimensions.
-
-## Testing the flow end-to-end
-
-1. Register two accounts (`alice@example.com` and `bob@example.com`).
-2. As Alice, upload an NDA PDF.
-3. Send for signature to Bob with coordinate `{ page_number: 1, x: 100, y: 600, width: 200, height: 60 }`.
-4. Bob receives an email (and SMS if a phone is on the request). If Bob's browser has the extension installed and connected, a desktop notification appears within 1 minute.
-5. Bob opens the signing URL, draws his signature, accepts consent, submits.
-6. Alice receives an "X signed Y" extension notification on her next poll.
-7. Either party can download the signed PDF; the embedded HMAC can be verified through `POST /api/signatures/verify`.
-
-## License
-
-Internal / proprietary - adjust before publication.
+The source-of-truth GitHub project is [`msajeeb003/SignPro`](https://github.com/msajeeb003/SignPro). When you push, target a feature branch (e.g. `design/design-system`) and open a PR — let a human flip the theme switch before merging.
