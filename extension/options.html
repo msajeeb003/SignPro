@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>SignPro - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <div class="brand">
+                <img src="icons/icon-48.png" alt="" width="32" height="32">
+                <h1>SignPro Notifications</h1>
+            </div>
+            <p class="subtitle">Configure your connection to SignPro</p>
+        </header>
+
+        <section class="card">
+            <h2>Account Connection</h2>
+            <p>To receive real-time signature notifications, generate an extension token from your SignPro dashboard.</p>
+
+            <form id="connectForm">
+                <div class="form-group">
+                    <label for="apiBaseUrl">API Server URL</label>
+                    <input type="url" id="apiBaseUrl" placeholder="https://api.signpro.example.com" required>
+                    <small>The URL of your SignPro API server.</small>
+                </div>
+                <div class="form-group">
+                    <label for="frontendUrl">Dashboard URL</label>
+                    <input type="url" id="frontendUrl" placeholder="https://app.signpro.example.com" required>
+                    <small>The URL of the SignPro web app (used for signing links).</small>
+                </div>
+                <div class="form-group">
+                    <label for="token">Extension Token</label>
+                    <input type="password" id="token" placeholder="Paste your extension token" required>
+                    <small>Generated from your SignPro dashboard - Settings &rarr; Browser Extension.</small>
+                </div>
+                <div class="form-group">
+                    <label for="pollInterval">Polling Interval (minutes)</label>
+                    <input type="number" id="pollInterval" min="1" max="60" value="1">
+                    <small>How often to check for new signature requests (min 1 minute).</small>
+                </div>
+                <div class="actions">
+                    <button type="submit" id="connectBtn" class="btn btn-primary">Connect</button>
+                    <button type="button" id="disconnectBtn" class="btn btn-danger hidden">Disconnect</button>
+                </div>
+                <div id="status" class="status"></div>
+            </form>
+        </section>
+
+        <section id="connectedSection" class="card hidden">
+            <h2>Status</h2>
+            <dl class="status-list">
+                <dt>Connected as</dt>
+                <dd id="statusUser">-</dd>
+                <dt>Last poll</dt>
+                <dd id="statusLastPoll">-</dd>
+                <dt>Pending signatures</dt>
+                <dd id="statusPending">-</dd>
+                <dt>Failures</dt>
+                <dd id="statusFailures">-</dd>
+            </dl>
+        </section>
+
+        <section class="card">
+            <h2>About</h2>
+            <p>SignPro Browser Extension v1.0.0</p>
+            <p>This extension polls your SignPro server for incoming signature requests and shows browser notifications. Your extension token is stored locally and synced across your signed-in browsers via Chrome Sync.</p>
+        </section>
+    </main>
+
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{
+    "manifest_version": 3,
+    "name": "SignPro Notifications",
+    "short_name": "SignPro",
+    "version": "1.0.0",
+    "description": "Real-time signature request notifications from SignPro. Get notified when documents are ready for your signature.",
+    "author": "SignPro",
+    "minimum_chrome_version": "108",
+
+    "permissions": [
+        "storage",
+        "notifications",
+        "alarms"
+    ],
+
+    "host_permissions": [
+        "http://localhost:4000/*",
+        "https://*.signpro.example.com/*"
+    ],
+
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "SignPro - Signature Requests",
+        "default_icon": {
+            "16": "icons/icon-16.png",
+            "32": "icons/icon-32.png",
+            "48": "icons/icon-48.png",
+            "128": "icons/icon-128.png"
+        }
+    },
+
+    "icons": {
+        "16": "icons/icon-16.png",
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
+    },
+
+    "options_page": "options.html",
+
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'self'; connect-src 'self' http://localhost:4000 https://*.signpro.example.com;"
+    },
+
+    "web_accessible_resources": [
+        {
+            "resources": ["icons/*.png"],
+            "matches": ["<all_urls>"]
+        }
+    ]
+}
