@@ -14,7 +14,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: npm install --no-audit --no-fund && npm run migrate
+    buildCommand: npm install --omit=dev --no-audit --no-fund && npm run migrate
     startCommand: node src/server.js
     healthCheckPath: /health
     autoDeploy: true
@@ -24,6 +24,9 @@ services:
         value: production
       - key: PORT
         value: 4000
+      # Skip Chromium download (puppeteer is dev-only now, but belt-and-suspenders)
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: true
       - key: LOG_LEVEL
         value: info
       - key: BCRYPT_ROUNDS
