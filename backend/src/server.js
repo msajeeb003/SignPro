@@ -13,6 +13,7 @@ const { globalLimiter } = require('./middleware/rateLimiter');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const documentService = require('./services/documentService');
 const signatureService = require('./services/signatureService');
+const r2Storage = require('./services/r2Storage');
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 async function start() {
+    r2Storage.install();
     await documentService.ensureUploadDir();
     await signatureService.ensureSignedDir();
     const server = app.listen(config.port, () => {

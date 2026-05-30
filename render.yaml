@@ -1,0 +1,98 @@
+# Render Blueprint for SignPro backend
+# https://render.com/docs/blueprint-spec
+#
+# Drop this file at the repo root and use Render's "Blueprints" feature
+# (Dashboard -> New + -> Blueprint) to auto-provision the service.
+#
+# After provisioning, fill in the secret env vars marked `sync: false`
+# from the dashboard (Settings -> Environment).
+
+services:
+  - type: web
+    name: signpro-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install --no-audit --no-fund && npm run migrate
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    branch: claude/legal-document-signing-app-Wx12t
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: LOG_LEVEL
+        value: info
+      - key: BCRYPT_ROUNDS
+        value: 12
+
+      # Upload paths (R2-backed in production - paths are virtual)
+      - key: UPLOAD_DIR
+        value: /tmp/signpro-uploads
+      - key: MAX_FILE_SIZE_MB
+        value: 25
+
+      # Postgres (Neon) - paste your full connection string
+      - key: DATABASE_URL
+        sync: false
+      - key: PG_SSL
+        value: true
+
+      # JWT / signature secrets - generate 3 unique 64-char hex strings
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: SIGNATURE_HMAC_SECRET
+        generateValue: true
+      - key: EXTENSION_POLL_SECRET
+        generateValue: true
+
+      # Cloudflare R2 (S3-compatible) - paste from the R2 dashboard
+      - key: R2_BUCKET
+        value: signpro-uploads
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_REGION
+        value: auto
+
+      # URLs - fill in after frontend is deployed
+      - key: FRONTEND_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+
+      # SMTP (optional - leave blank to use per-user SMTP only)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: SignPro
+      - key: SMTP_FROM_ADDRESS
+        sync: false
+
+      # Twilio SMS (optional)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+      # Rate limiting
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 500

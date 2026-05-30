@@ -14,21 +14,24 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { handleValidation, sanitizeFilename } = require('../utils/validators');
 const documentService = require('../services/documentService');
 const auditService = require('../services/auditService');
+const r2Storage = require('../services/r2Storage');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-    destination: async (_req, _file, cb) => {
-        try {
-            await fs.mkdir(config.upload.dir, { recursive: true });
-            cb(null, config.upload.dir);
-        } catch (err) { cb(err); }
-    },
-    filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname || '');
-        cb(null, `${uuidv4()}${ext}`);
-    }
-});
+const storage = r2Storage.isEnabled()
+    ? r2Storage.multerStorage()
+    : multer.diskStorage({
+        destination: async (_req, _file, cb) => {
+            try {
+                await fs.mkdir(config.upload.dir, { recursive: true });
+                cb(null, config.upload.dir);
+            } catch (err) { cb(err); }
+        },
+        filename: (_req, file, cb) => {
+            const ext = path.extname(file.originalname || '');
+            cb(null, `${uuidv4()}${ext}`);
+        }
+    });
 
 const upload = multer({
     storage,
@@ -171,10 +174,11 @@ router.get('/:id/download',
                 filename = `signed_${sanitizeFilename(doc.title)}.pdf`;
             }
         }
+        let buffer;
         try {
-            await fs.access(filePath);
-        } catch {
-            return res.status(404).json({ error: 'File not found on disk' });
+            buffer = await fs.readFile(filePath);
+        } catch (err) {
+            return res.status(404).json({ error: 'File not found in storage' });
         }
         await auditService.record({
             actor_user_id: req.user.id,
@@ -186,7 +190,11 @@ router.get('/:id/download',
             description: `Downloaded ${variant} variant`,
             ip_address: req.ip
         });
-        res.download(filePath, filename);
+        const safeFilename = sanitizeFilename(filename);
+        res.setHeader('Content-Type', doc.mime_type || 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+        res.setHeader('Content-Length', buffer.length);
+        res.send(buffer);
     })
 );
 
