@@ -37,15 +37,28 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-const allowedOrigins = [config.frontendUrl];
+const allowedOrigins = [config.frontendUrl].filter(Boolean);
 if (config.extension.extensionId) {
     allowedOrigins.push(`chrome-extension://${config.extension.extensionId}`);
 }
+
+function isAllowedOrigin(origin) {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    if (origin.startsWith('chrome-extension://')) return true;
+    try {
+        const host = new URL(origin).hostname;
+        if (host.endsWith('.vercel.app')) return true;
+        if (host.endsWith('.onrender.com')) return true;
+        if (host === 'localhost' || host === '127.0.0.1') return true;
+    } catch { /* malformed origin */ }
+    return false;
+}
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://')) {
-            return callback(null, true);
-        }
+        if (isAllowedOrigin(origin)) return callback(null, true);
+        logger.warn('CORS rejected', { origin });
         callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
