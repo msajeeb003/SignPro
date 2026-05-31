@@ -65,13 +65,23 @@ async function verifySmtp({ host, port, secure, username, password }) {
     const transporter = nodemailer.createTransport({
         host, port, secure,
         auth: { user: username, pass: password },
-        connectionTimeout: 10000
+        connectionTimeout: 30000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000,
+        requireTLS: !secure && port === 587,
+        tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true }
     });
     try {
         await transporter.verify();
         return { ok: true };
     } catch (error) {
-        return { ok: false, error: error.message };
+        let friendly = error.message;
+        if (/ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(error.code || error.message)) {
+            friendly = `Could not reach ${host}:${port}. Either the SMTP host blocks the connection, the port is wrong, or the cloud provider is firewalling outbound SMTP. Try a cloud-friendly provider (SendGrid, Resend, Brevo) or check that the host/port match your provider's settings.`;
+        } else if (/Invalid login|Authentication unsuccessful|535/i.test(error.message)) {
+            friendly = `Authentication rejected by ${host}. If using Gmail/Office 365, you need an app password (not your normal password), and SMTP AUTH must be enabled on the mailbox.`;
+        }
+        return { ok: false, error: friendly };
     } finally {
         transporter.close();
     }
