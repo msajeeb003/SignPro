@@ -378,10 +378,11 @@ export default function DocumentEditorPage() {
 
 function EditorPage({ page, tool, fields, signers, onPageClick, onFieldClick, onFieldDelete }) {
     return (
-        <div className={`editor-page ${tool !== 'select' ? 'placing' : ''}`}
-             style={{ aspectRatio: `${page.width} / ${page.height}` }}>
+        <div className={`editor-page ${tool !== 'select' ? 'placing' : ''}`}>
             <div className="editor-page-number">Page {page.pageNumber}</div>
-            <div className="editor-page-canvas" onClick={onPageClick}>
+            <div className="editor-page-canvas"
+                 onClick={onPageClick}
+                 style={{ aspectRatio: `${page.width} / ${page.height}` }}>
                 {page.imageDataUrl
                     ? <img src={page.imageDataUrl} alt={`Page ${page.pageNumber}`} draggable={false} />
                     : <div className="editor-page-placeholder">No preview available for page {page.pageNumber}</div>
