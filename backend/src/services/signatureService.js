@@ -87,13 +87,15 @@ async function createSignatureRequests({ documentId, sender, recipients, notify,
                 [recipient.email.toLowerCase()]
             );
             const signerUserId = signerUserLookup.rows[0]?.id || null;
+            const isSelf = recipient.auto_sign === true && signerUserId === sender.id;
 
             const sigInsert = await client.query(
                 `INSERT INTO signature_requests (
                     document_id, sender_id, signer_user_id, signer_email, signer_name,
                     signer_phone, signing_order, status, access_token,
-                    access_token_expires_at, message, verification_code, expires_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12)
+                    access_token_expires_at, message, verification_code, expires_at,
+                    sent_at, first_viewed_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING *`,
                 [
                     documentId,
@@ -103,24 +105,34 @@ async function createSignatureRequests({ documentId, sender, recipients, notify,
                     recipient.name,
                     recipient.phone || null,
                     recipient.signing_order || 1,
+                    isSelf ? 'pending' : 'pending',
                     accessToken,
                     expiresAt,
                     recipient.message || null,
                     verificationCode,
-                    expiresAt
+                    expiresAt,
+                    isSelf ? new Date() : null,
+                    isSelf ? new Date() : null
                 ]
             );
             const sigRequest = sigInsert.rows[0];
+            const insertedFields = [];
 
-            for (const field of recipient.fields) {
+            for (let i = 0; i < recipient.fields.length; i++) {
+                const field = recipient.fields[i];
                 validateField(field, document);
-                await client.query(
+                const signedField = isSelf
+                    ? recipient.signed_fields?.find(sf => sf.sort_order === (field.sort_order ?? i))
+                    : null;
+                const result = await client.query(
                     `INSERT INTO signature_coordinates (
                         signature_request_id, document_id, field_type, page_number,
                         x_position, y_position, width, height,
                         page_width, page_height,
-                        is_required, label, placeholder, sort_order
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                        is_required, label, placeholder, sort_order,
+                        signed_value, signed_image_data, signed_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    RETURNING *`,
                     [
                         sigRequest.id,
                         documentId,
@@ -135,9 +147,13 @@ async function createSignatureRequests({ documentId, sender, recipients, notify,
                         field.is_required !== false,
                         field.label || null,
                         field.placeholder || null,
-                        field.sort_order || 0
+                        field.sort_order ?? i,
+                        signedField?.value || null,
+                        signedField?.image_data || null,
+                        isSelf && signedField ? new Date() : null
                     ]
                 );
+                insertedFields.push(result.rows[0]);
             }
 
             await auditService.record({
@@ -148,10 +164,22 @@ async function createSignatureRequests({ documentId, sender, recipients, notify,
                 entity_id: sigRequest.id,
                 document_id: documentId,
                 signature_request_id: sigRequest.id,
-                description: `Signature request created for ${recipient.email}`,
+                description: `Signature request created for ${recipient.email}${isSelf ? ' (self)' : ''}`,
                 ip_address: requestContext?.ip,
                 user_agent: requestContext?.userAgent
             }, { client });
+
+            if (isSelf) {
+                await completeSelfSign({
+                    client,
+                    sigRequest,
+                    document,
+                    sender,
+                    fields: insertedFields,
+                    requestContext
+                });
+                sigRequest._autoSigned = true;
+            }
 
             out.push(sigRequest);
         }
@@ -165,7 +193,11 @@ async function createSignatureRequests({ documentId, sender, recipients, notify,
 
     const deliveryResults = [];
     for (const sr of created) {
-        const result = { signature_request_id: sr.id, email: null, sms: null };
+        const result = { signature_request_id: sr.id, email: null, sms: null, autoSigned: !!sr._autoSigned };
+        if (sr._autoSigned) {
+            deliveryResults.push(result);
+            continue;
+        }
         if (notify?.email !== false) {
             result.email = await emailService.sendSignatureRequestEmail({
                 signatureRequest: sr,
@@ -622,6 +654,93 @@ async function embedSignaturesIntoPdf({ sourcePath, outputPath, fields, valueMap
     const signedBytes = await pdfDoc.save();
     await fs.writeFile(outputPath, signedBytes);
     return cryptoUtils.sha256(signedBytes);
+}
+
+/**
+ * Inline self-signing: called within createSignatureRequests when a recipient
+ * has auto_sign=true and the signer matches the authenticated sender. Embeds
+ * the provided signatures, records evidence, and marks the request signed -
+ * no email or token-based signing session needed.
+ */
+async function completeSelfSign({ client, sigRequest, document, sender, fields, requestContext }) {
+    await ensureSignedDir();
+
+    const signedFilePath = path.join(
+        SIGNED_DOCS_DIR,
+        `${sigRequest.id}_selfsign_${Date.now()}.pdf`
+    );
+
+    const sourcePath = document.document_type === 'docx'
+        ? `${document.storage_path}.pdf`
+        : document.storage_path;
+
+    const valueMap = new Map();
+    for (const f of fields) {
+        valueMap.set(f.id, {
+            field_id: f.id,
+            value: f.signed_value,
+            image_data: f.signed_image_data
+        });
+    }
+
+    const signedHash = await embedSignaturesIntoPdf({
+        sourcePath,
+        outputPath: signedFilePath,
+        fields,
+        valueMap,
+        signerName: sigRequest.signer_name,
+        signedAt: new Date()
+    });
+
+    const signatureHmac = cryptoUtils.hmac(
+        `${sigRequest.id}|${document.id}|${signedHash}|${sigRequest.signer_email}`
+    );
+
+    await client.query(
+        `INSERT INTO signature_evidence (
+            signature_request_id, document_id, signer_id,
+            signed_document_hash, signature_hmac, signed_pdf_path,
+            consent_text, consent_accepted_at,
+            ip_address, user_agent, verification_method
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+            sigRequest.id,
+            document.id,
+            sender.id,
+            signedHash,
+            signatureHmac,
+            signedFilePath,
+            'I authored this document and consent to use my electronic signature as the legally binding signature.',
+            new Date(),
+            requestContext?.ip || null,
+            requestContext?.userAgent || null,
+            'authenticated_session'
+        ]
+    );
+
+    await client.query(
+        `UPDATE signature_requests
+         SET status = 'signed', signed_at = NOW(),
+             sign_ip_address = $2, sign_user_agent = $3
+         WHERE id = $1`,
+        [sigRequest.id, requestContext?.ip || null, requestContext?.userAgent || null]
+    );
+
+    await auditService.record({
+        actor_user_id: sender.id,
+        actor_email: sender.email,
+        action: 'document_signed',
+        entity_type: 'signature_request',
+        entity_id: sigRequest.id,
+        document_id: document.id,
+        signature_request_id: sigRequest.id,
+        description: `Document self-signed by ${sender.email} in editor`,
+        ip_address: requestContext?.ip,
+        user_agent: requestContext?.userAgent,
+        metadata: { signed_hash: signedHash, method: 'self_sign' }
+    }, { client });
+
+    return { signedHash, signatureHmac, signedFilePath };
 }
 
 async function declineSignature({ accessToken, reason, requestContext }) {

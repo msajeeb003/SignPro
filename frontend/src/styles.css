@@ -2139,3 +2139,532 @@ input[type="file"]:hover {
     .app-content { padding: 24px 20px 100px; }
     .dash-hero { flex-direction: column; align-items: flex-start; }
 }
+
+/* =============================================================================
+   DOCUMENT EDITOR - prepare fields, sign yourself, send to recipients
+   ============================================================================= */
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg);
+    overflow: hidden;
+    margin: -32px -40px -64px;
+}
+
+.editor-loading, .editor-error {
+    padding: 64px;
+    text-align: center;
+    color: var(--label-secondary);
+}
+
+.editor-error h2 { color: var(--danger); margin-bottom: 8px; }
+.editor-error p { margin-bottom: 16px; }
+
+.editor-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--hairline);
+    gap: 16px;
+    z-index: 30;
+}
+
+.editor-header-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.editor-header-left h1 {
+    font-size: 17px; margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 360px;
+}
+.editor-header-left .muted { font-size: 12px; margin: 0; }
+
+.editor-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    color: var(--label);
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    transition: all var(--d-fast) var(--ease);
+}
+.editor-back:hover { background: var(--bg-secondary); transform: scale(1.05); }
+
+.editor-header-right { display: flex; gap: 8px; }
+
+.editor-error-banner {
+    flex-shrink: 0;
+    padding: 10px 24px;
+    background: rgba(255, 59, 48, 0.08);
+    border-bottom: 1px solid rgba(255, 59, 48, 0.2);
+    color: #B8261D;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.editor-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Left toolbar */
+.editor-toolbar {
+    background: var(--white);
+    border-right: 1px solid var(--hairline);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.editor-toolbar-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--label-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 8px 0 0;
+}
+
+.editor-signer-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--label);
+}
+
+.editor-signer-pill .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--signer-color, var(--primary));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--signer-color, var(--primary)) 18%, transparent);
+    flex-shrink: 0;
+}
+
+.me-tag {
+    background: var(--primary-tint);
+    color: var(--primary-dark);
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+.editor-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.editor-tool {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    color: var(--label-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all var(--d-fast) var(--ease);
+}
+
+.editor-tool:hover {
+    background: var(--bg-secondary);
+    color: var(--label);
+    transform: translateY(-1px);
+}
+
+.editor-tool.active {
+    background: var(--primary-tint);
+    color: var(--primary-dark);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+.editor-tool.active svg { color: var(--primary); }
+
+.editor-tool-hint {
+    padding: 10px 12px;
+    background: var(--primary-tint);
+    color: var(--primary-dark);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px dashed var(--primary);
+}
+
+/* Center canvas */
+.editor-canvas {
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    background: linear-gradient(180deg, #F5F5F7 0%, #FBFBFD 100%);
+}
+
+.editor-page {
+    width: 100%;
+    max-width: 820px;
+    position: relative;
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+.editor-page.placing .editor-page-canvas { cursor: crosshair; }
+
+.editor-page-number {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: var(--white);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--hairline);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--label-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    z-index: 2;
+}
+
+.editor-page-canvas {
+    position: relative;
+    width: 100%;
+}
+
+.editor-page-canvas img {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+}
+
+.editor-page-placeholder {
+    aspect-ratio: 8.5/11;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--label-tertiary);
+    background: #F5F5F7;
+    font-size: 13px;
+}
+
+/* Field overlay on a page */
+.editor-field {
+    position: absolute;
+    border: 2px dashed var(--field-color, var(--primary));
+    background: color-mix(in srgb, var(--field-color, var(--primary)) 10%, transparent);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--d-fast) var(--ease);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.editor-field.filled {
+    border-style: solid;
+    background: color-mix(in srgb, var(--field-color, var(--primary)) 6%, white);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--field-color, var(--primary)) 20%, transparent);
+}
+
+.editor-field:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--field-color, var(--primary)) 25%, transparent);
+    z-index: 4;
+}
+
+.editor-field-tag {
+    position: absolute;
+    top: -10px;
+    left: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    border: 2px solid var(--white);
+}
+
+.editor-field-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 4px;
+    font-size: 11px;
+    color: var(--field-color, var(--primary));
+    font-weight: 600;
+}
+
+.editor-field-content img {
+    width: auto !important;
+    height: auto !important;
+    max-width: 95%;
+    max-height: 95%;
+    pointer-events: none;
+}
+
+.editor-field-content span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+.editor-field-hint { font-style: italic; opacity: 0.8; }
+
+.editor-field-delete {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--white);
+    background: var(--danger);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    line-height: 1;
+}
+
+.editor-field:hover .editor-field-delete { display: flex; }
+.editor-field-delete:hover { transform: scale(1.15); }
+
+/* Field type variants - sizing hints */
+.editor-field.field-checkbox .editor-field-content {
+    font-size: 18px;
+}
+.editor-field.field-date,
+.editor-field.field-text,
+.editor-field.field-note {
+    background: color-mix(in srgb, var(--field-color, var(--primary)) 5%, white);
+}
+
+/* Right signers panel */
+.editor-signers {
+    background: var(--white);
+    border-left: 1px solid var(--hairline);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.editor-signers h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--label);
+    margin: 6px 0 0;
+}
+
+.editor-signers .muted { font-size: 12px; line-height: 1.45; }
+
+.editor-signers textarea {
+    font-size: 13px;
+    min-height: 70px;
+}
+
+.signer-list { display: flex; flex-direction: column; gap: 8px; }
+
+.signer-card {
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all var(--d-fast) var(--ease);
+    position: relative;
+    overflow: hidden;
+}
+
+.signer-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--signer-color, var(--primary));
+    opacity: 0.3;
+    transition: opacity var(--d-fast) var(--ease);
+}
+
+.signer-card.active {
+    border-color: var(--signer-color, var(--primary));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--signer-color, var(--primary)) 18%, transparent);
+}
+
+.signer-card.active::before { opacity: 1; }
+
+.signer-card:hover { background: var(--bg-secondary); }
+
+.signer-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.signer-card-head > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.signer-card-head strong {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signer-card-head small {
+    color: var(--label-tertiary);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signer-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.signer-remove {
+    background: transparent;
+    border: none;
+    color: var(--label-tertiary);
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    transition: all var(--d-fast) var(--ease);
+}
+
+.signer-remove:hover { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
+
+.signer-stats {
+    font-size: 11px;
+    color: var(--label-tertiary);
+    padding-left: 42px;
+}
+
+.btn-add-signer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: var(--white);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    color: var(--label-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--d-fast) var(--ease);
+}
+
+.btn-add-signer:hover {
+    background: var(--primary-tint);
+    color: var(--primary-dark);
+    border-color: var(--primary);
+    border-style: solid;
+}
+
+.editor-modal {
+    max-width: 620px;
+}
+
+@media (max-width: 1024px) {
+    .editor-body { grid-template-columns: 200px 1fr 280px; }
+    .editor-header-left h1 { max-width: 240px; }
+}
+
+@media (max-width: 768px) {
+    .editor-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+    }
+    .editor-toolbar {
+        border-right: none;
+        border-bottom: 1px solid var(--hairline);
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 12px;
+    }
+    .editor-toolbar-label { display: none; }
+    .editor-tools {
+        display: flex;
+        grid-template-columns: none;
+        flex-shrink: 0;
+    }
+    .editor-tool {
+        flex-direction: row;
+        min-width: 100px;
+    }
+    .editor-signers {
+        border-left: none;
+        border-top: 1px solid var(--hairline);
+        max-height: 240px;
+    }
+}

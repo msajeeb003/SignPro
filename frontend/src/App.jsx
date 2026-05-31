@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import UploadPage from './pages/UploadPage.jsx';
 import DocumentDetailPage from './pages/DocumentDetailPage.jsx';
+import DocumentEditorPage from './pages/DocumentEditorPage.jsx';
 import SmtpSettingsPage from './pages/SmtpSettingsPage.jsx';
 import ExtensionTokenPage from './pages/ExtensionTokenPage.jsx';
 import SignPage from './pages/SignPage.jsx';
@@ -162,6 +163,9 @@ export default function App() {
                     } />
                     <Route path="/documents/:id" element={
                         <ProtectedRoute><DocumentDetailPage /></ProtectedRoute>
+                    } />
+                    <Route path="/documents/:id/edit" element={
+                        <ProtectedRoute><DocumentEditorPage /></ProtectedRoute>
                     } />
                     <Route path="/settings/smtp" element={
                         <ProtectedRoute><SmtpSettingsPage /></ProtectedRoute>

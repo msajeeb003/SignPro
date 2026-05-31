@@ -42,13 +42,18 @@ export default function DocumentDetailPage() {
                     <p className="meta">{doc.document_type?.toUpperCase()} - {doc.page_count} page(s) - Status: {doc.status}</p>
                 </div>
                 <div className="actions">
-                    {(doc.status === 'ready' || doc.status === 'sent' || doc.status === 'partially_signed') &&
-                        <button onClick={() => setShowSendForm(true)} className="btn btn-primary">
-                            Send for signature
-                        </button>
+                    {(doc.status === 'ready' || doc.status === 'uploaded') &&
+                        <Link to={`/documents/${doc.id}/edit`} className="btn btn-primary">
+                            Prepare & Send
+                        </Link>
+                    }
+                    {(doc.status === 'sent' || doc.status === 'partially_signed') &&
+                        <Link to={`/documents/${doc.id}/edit`} className="btn">
+                            Add more signers
+                        </Link>
                     }
                     {doc.status === 'completed' &&
-                        <a href={`/api/documents/${doc.id}/download?variant=signed`} className="btn">
+                        <a href={`/api/documents/${doc.id}/download?variant=signed`} className="btn btn-primary">
                             Download signed PDF
                         </a>
                     }
