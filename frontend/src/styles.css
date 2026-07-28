@@ -14,55 +14,58 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-:root {
-    /* Apple System Green */
-    --primary: #34C759;
-    --primary-dark: #248A3D;
-    --primary-light: #4CD964;
-    --primary-tint: rgba(52, 199, 89, 0.12);
-    --primary-glow: rgba(52, 199, 89, 0.32);
+@import './styles/tokens.css';
+@import './styles/tokens-luxe.css';
 
-    /* Neutrals (Apple system) */
-    --white: #FFFFFF;
-    --bg: #FBFBFD;
+:root {
+    /* Map Apple-style variables to the utility tokens where possible */
+    --primary: var(--signpro-blue);
+    --primary-dark: var(--signpro-blue-hover);
+    --primary-light: #60a5fa;
+    --primary-tint: var(--signpro-blue-10);
+    --primary-glow: var(--signpro-blue-15);
+
+    /* Neutrals */
+    --white: var(--signpro-card);
+    --bg: var(--signpro-bg);
     --bg-secondary: #F5F5F7;
-    --bg-elevated: #FFFFFF;
-    --border: rgba(0, 0, 0, 0.08);
-    --border-strong: rgba(0, 0, 0, 0.14);
-    --hairline: rgba(0, 0, 0, 0.06);
+    --bg-elevated: var(--signpro-card);
+    --border: var(--signpro-border);
+    --border-strong: #d1d5db;
+    --hairline: #e5e7eb;
 
     /* Text */
-    --label: #1D1D1F;
-    --label-secondary: #6E6E73;
-    --label-tertiary: #86868B;
+    --label: var(--signpro-text);
+    --label-secondary: var(--signpro-text-2);
+    --label-tertiary: var(--signpro-text-3);
     --label-quaternary: #C7C7CC;
 
     /* Semantic */
-    --danger: #FF3B30;
-    --warning: #FF9500;
-    --success: #34C759;
-    --info: #007AFF;
+    --danger: var(--signpro-danger);
+    --warning: var(--signpro-warning);
+    --success: var(--signpro-success);
+    --info: var(--signpro-blue);
 
     /* Glass */
     --glass-bg: rgba(255, 255, 255, 0.72);
     --glass-border: rgba(255, 255, 255, 0.55);
     --glass-blur: saturate(180%) blur(20px);
 
-    /* Shadows - Apple's soft, layered approach */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    /* Shadows */
+    --shadow-xs: var(--shadow-page);
+    --shadow-sm: var(--shadow-card);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
     --shadow-xl: 0 24px 56px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
-    --shadow-green: 0 8px 24px rgba(52, 199, 89, 0.24), 0 2px 6px rgba(52, 199, 89, 0.16);
-    --shadow-green-hover: 0 12px 32px rgba(52, 199, 89, 0.32), 0 4px 8px rgba(52, 199, 89, 0.20);
+    --shadow-green: 0 8px 24px var(--signpro-blue-15), 0 2px 6px var(--signpro-blue-10);
+    --shadow-green-hover: 0 12px 32px var(--signpro-blue-15), 0 4px 8px var(--signpro-blue-10);
 
     /* Radii */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 20px;
-    --radius-2xl: 24px;
+    --radius-sm: var(--radius-sm, 4px);
+    --radius-md: var(--radius, 6px);
+    --radius-lg: var(--radius-md, 8px);
+    --radius-xl: var(--radius-md, 8px);
+    --radius-2xl: var(--radius-pill, 12px);
     --radius-full: 999px;
 
     /* Motion */
@@ -74,14 +77,60 @@
     --d-slow: 400ms;
 }
 
+html[data-theme="luxe"] {
+    /* Mapping to Luxe Tokens */
+    --primary: var(--luxe-brass);
+    --primary-dark: var(--luxe-brass-deep);
+    --primary-light: var(--luxe-brass-soft);
+    --primary-tint: var(--luxe-brass-soft);
+    --primary-glow: rgba(160, 126, 60, 0.2);
+
+    --white: var(--luxe-paper);
+    --bg: var(--luxe-cream);
+    --bg-secondary: var(--luxe-bone);
+    --bg-elevated: var(--luxe-paper);
+    --border: var(--luxe-rule);
+    --border-strong: var(--luxe-rule);
+    --hairline: var(--luxe-rule);
+
+    --label: var(--luxe-ink);
+    --label-secondary: var(--luxe-ink-2);
+    --label-tertiary: var(--luxe-ink-3);
+    --label-quaternary: #A0988A;
+
+    --danger: var(--luxe-seal-red);
+    --warning: var(--luxe-amber);
+    --success: var(--luxe-seal-green);
+    --info: var(--luxe-brass);
+
+    --shadow-xs: var(--luxe-shadow-page);
+    --shadow-sm: var(--luxe-shadow-lift);
+    
+    --radius-sm: var(--luxe-radius);
+    --radius-md: var(--luxe-radius);
+    --radius-lg: var(--luxe-radius);
+    --radius-xl: var(--luxe-radius);
+    --radius-2xl: var(--luxe-radius);
+}
+
+html[data-theme="luxe"] body, html[data-theme="luxe"] input, html[data-theme="luxe"] button, html[data-theme="luxe"] textarea, html[data-theme="luxe"] select {
+    font-family: var(--luxe-sans);
+}
+
+html[data-theme="luxe"] h1, 
+html[data-theme="luxe"] h2 {
+    font-family: var(--luxe-serif);
+    font-weight: 400;
+}
+
+
 html {
     font-size: 16px;
     scroll-behavior: smooth;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-                 "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif);
     font-size: 15px;
     line-height: 1.47;
     color: var(--label);

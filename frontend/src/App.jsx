@@ -10,6 +10,7 @@ import DocumentEditorPage from './pages/DocumentEditorPage.jsx';
 import SmtpSettingsPage from './pages/SmtpSettingsPage.jsx';
 import ExtensionTokenPage from './pages/ExtensionTokenPage.jsx';
 import SignPage from './pages/SignPage.jsx';
+import ThemeSwitcher from './components/ThemeSwitcher.jsx';
 
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
@@ -95,6 +96,7 @@ function TopBar() {
                     placeholder="Search documents, templates, or signers..." />
             </form>
             <div className="topbar-actions">
+                <ThemeSwitcher />
                 <button className="topbar-help" title="Help" aria-label="Help">
                     <Icon name="help" />
                     <span>Help</span>
