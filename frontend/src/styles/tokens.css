@@ -10,12 +10,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 
 :root {
-    /* ---------- BRAND / PRIMARY ---------- */
-    --signpro-blue:        #2563eb;   /* primary action */
-    --signpro-blue-hover:  #1d4ed8;   /* button :hover, link :active */
-    --signpro-blue-10:     rgba(37, 99, 235, 0.10);
-    --signpro-blue-15:     rgba(37, 99, 235, 0.15);
-    --signpro-blue-focus:  rgba(37, 99, 235, 0.10); /* 3px focus ring */
+    /* ---------- BRAND / PRIMARY — Agency Green ---------- */
+    --signpro-blue:        #16a34a;   /* primary green action */
+    --signpro-blue-hover:  #15803d;   /* button :hover */
+    --signpro-blue-10:     rgba(22, 163, 74, 0.10);
+    --signpro-blue-15:     rgba(22, 163, 74, 0.15);
+    --signpro-blue-focus:  rgba(22, 163, 74, 0.15); /* 3px focus ring */
+
+    /* Green accent shades */
+    --signpro-green-light:  #4ade80;
+    --signpro-green-dark:   #14532d;
+    --signpro-green-50:     #f0fdf4;
+    --signpro-green-100:    #dcfce7;
 
     /* ---------- SEMANTIC ---------- */
     --signpro-success:     #16a34a;
@@ -30,8 +36,9 @@
     --signpro-danger-10:   rgba(220, 38, 38, 0.10);
     --signpro-danger-30:   rgba(220, 38, 38, 0.30);
 
-    /* ---------- NEUTRALS ---------- */
-    --signpro-bg:          #f9fafb;   /* app background */
+    /* ---------- NEUTRALS (Clean White) ---------- */
+    --signpro-bg:          #ffffff;   /* pure white background */
+    --signpro-bg-subtle:   #f9fafb;   /* subtle off-white sections */
     --signpro-card:        #ffffff;   /* card / surface */
     --signpro-border:      #e5e7eb;   /* hairline */
     --signpro-text:        #111827;   /* primary text */
@@ -42,10 +49,13 @@
     /* ---------- ALIAS (short) ---------- */
     --primary:        var(--signpro-blue);
     --primary-hover:  var(--signpro-blue-hover);
+    --primary-light:  var(--signpro-green-light);
+    --primary-dark:   var(--signpro-green-dark);
     --danger:         var(--signpro-danger);
     --success:        var(--signpro-success);
     --warning:        var(--signpro-warning);
     --bg:             var(--signpro-bg);
+    --bg-subtle:      var(--signpro-bg-subtle);
     --card:           var(--signpro-card);
     --border:         var(--signpro-border);
     --text:           var(--signpro-text);

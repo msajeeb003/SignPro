@@ -1,117 +1,221 @@
-import axios from 'axios';
+/**
+ * Mock API service for NDA feature development.
+ * Replaces real HTTP calls so the app works without a PostgreSQL database.
+ * When integrating into the Next.js webapp, replace these mocks with real
+ * fetch/axios calls to your Next.js API routes.
+ */
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const uuid = () => crypto.randomUUID();
 
-export const api = axios.create({
-    baseURL: API_BASE || '/',
-    headers: { 'Content-Type': 'application/json' }
-});
+// ── Agency defaults pre-filled in every NDA ──────────────────────────────────
+const AGENCY = {
+    name: 'My Agency',
+    email: 'admin@myagency.com',
+    address: '123 Agency Street, Dhaka, Bangladesh',
+    representative: 'Agency Owner',
+    designation: 'Managing Director',
+    // Base64 placeholder signature image (thin green pen stroke)
+    signatureDataUrl: null, // Will be set to agency default sig
+};
 
-const ACCESS_KEY = 'signpro_access_token';
-const REFRESH_KEY = 'signpro_refresh_token';
+// ── Pre-built NDA template content ───────────────────────────────────────────
+const NDA_TEMPLATE_TEXT = `NON-DISCLOSURE AGREEMENT
 
-export function setTokens({ accessToken, refreshToken }) {
-    if (accessToken) localStorage.setItem(ACCESS_KEY, accessToken);
-    if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
-}
+This Non-Disclosure Agreement ("Agreement") is entered into as of [DATE] between:
 
-export function clearTokens() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-}
+DISCLOSING PARTY:
+${AGENCY.name}
+${AGENCY.address}
+(hereinafter "Agency")
 
-export function getAccessToken() {
-    return localStorage.getItem(ACCESS_KEY);
-}
+RECEIVING PARTY:
+[CLIENT NAME]
+[CLIENT EMAIL]
+(hereinafter "Client")
 
-api.interceptors.request.use((config) => {
-    const token = getAccessToken();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-});
+1. CONFIDENTIAL INFORMATION
+The Agency may disclose to the Client certain confidential and proprietary information ("Confidential Information") for the purpose of evaluating a potential business relationship.
 
-let refreshPromise = null;
+2. OBLIGATIONS
+The Client agrees to:
+(a) Hold the Confidential Information in strict confidence;
+(b) Not disclose the Confidential Information to any third party without prior written consent;
+(c) Use the Confidential Information solely for the Purpose stated herein.
 
-api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const original = error.config;
-        if (error.response?.status === 401 && !original._retried) {
-            const refreshToken = localStorage.getItem(REFRESH_KEY);
-            if (!refreshToken) {
-                clearTokens();
-                throw error;
-            }
-            original._retried = true;
-            try {
-                if (!refreshPromise) {
-                    refreshPromise = axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken });
-                }
-                const { data } = await refreshPromise;
-                refreshPromise = null;
-                setTokens({ accessToken: data.accessToken });
-                original.headers.Authorization = `Bearer ${data.accessToken}`;
-                return api(original);
-            } catch (refreshError) {
-                refreshPromise = null;
-                clearTokens();
-                window.location.href = '/login';
-                throw refreshError;
-            }
-        }
-        throw error;
-    }
-);
+3. TERM
+This Agreement shall remain in effect for two (2) years from the date of execution.
 
+4. GOVERNING LAW
+This Agreement shall be governed by applicable law.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
+
+FOR THE AGENCY:
+${AGENCY.name}
+Signature: _________________________ [AGENCY SIGNATURE]
+Name: ${AGENCY.representative}
+Title: ${AGENCY.designation}
+Date: ${new Date().toLocaleDateString()}
+
+FOR THE CLIENT:
+Signature: _________________________
+Name: _________________________
+Title / Designation: _________________________
+Date: _________________________
+`;
+
+// ── In-memory "database" ─────────────────────────────────────────────────────
+let ndaRequests = [];
+
+// ── Helper: simulate async delay ─────────────────────────────────────────────
+const delay = (ms = 300) => new Promise(r => setTimeout(r, ms));
+
+// ── Exported mock API ─────────────────────────────────────────────────────────
+
+export const mockDocuments = {
+    list: async () => {
+        await delay();
+        return {
+            documents: ndaRequests.map(r => ({
+                id: r.id,
+                title: r.title,
+                status: r.status,
+                document_type: 'pdf',
+                page_count: 1,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+            })),
+            total: ndaRequests.length
+        };
+    },
+    get: async (id) => {
+        await delay();
+        const r = ndaRequests.find(d => d.id === id);
+        if (!r) throw { response: { data: { error: 'Not found' } } };
+        return r;
+    },
+};
+
+export const mockNda = {
+    /**
+     * Send an NDA to a client.
+     * Returns { token, signingLink }
+     */
+    send: async ({ clientName, clientEmail, message }) => {
+        await delay(600);
+        const id = uuid();
+        const token = uuid().replace(/-/g, '');
+        const record = {
+            id,
+            title: `NDA — ${clientName}`,
+            token,
+            clientName,
+            clientEmail,
+            message: message || '',
+            status: 'sent',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            templateText: NDA_TEMPLATE_TEXT
+                .replace('[CLIENT NAME]', clientName)
+                .replace('[CLIENT EMAIL]', clientEmail)
+                .replace('[DATE]', new Date().toLocaleDateString()),
+        };
+        ndaRequests.push(record);
+        return {
+            id,
+            token,
+            signingLink: `${window.location.origin}/sign/${token}`,
+            clientName,
+            clientEmail,
+        };
+    },
+
+    /**
+     * Get the signing session for a given token (called from the public sign page).
+     */
+    getSession: async (token) => {
+        await delay(400);
+        const r = ndaRequests.find(d => d.token === token);
+        if (!r) throw { response: { data: { error: 'Invalid or expired link' } } };
+        if (r.status === 'completed') throw { response: { data: { error: 'Already signed' } } };
+
+        return {
+            document: { title: r.title, id: r.id },
+            sender: { name: AGENCY.name, email: AGENCY.email },
+            signatureRequest: {
+                id: r.id,
+                signer_name: r.clientName,
+                signer_email: r.clientEmail,
+                message: r.message,
+            },
+            fields: [
+                { id: 'sig-1',    field_type: 'signature', label: 'Your Signature',    page_number: 1, is_required: true,  x_position: 60,  y_position: 72, width: 28, height: 6,  page_width: 100, page_height: 100 },
+                { id: 'date-1',   field_type: 'date',      label: 'Date',              page_number: 1, is_required: true,  x_position: 60,  y_position: 79, width: 15, height: 4,  page_width: 100, page_height: 100 },
+                { id: 'desg-1',   field_type: 'text',      label: 'Designation/Title', page_number: 1, is_required: true,  x_position: 60,  y_position: 84, width: 25, height: 4,  page_width: 100, page_height: 100, placeholder: 'e.g. CEO, Founder...' },
+            ],
+            ndaText: r.templateText,
+            agencySignature: AGENCY.signatureDataUrl,
+        };
+    },
+
+    /**
+     * Complete the signing (called when client submits their signature).
+     */
+    complete: async (token, { fieldValues, consent }) => {
+        await delay(800);
+        const r = ndaRequests.find(d => d.token === token);
+        if (!r) throw { response: { data: { error: 'Invalid token' } } };
+
+        r.status = 'completed';
+        r.signed_at = new Date().toISOString();
+        r.updated_at = r.signed_at;
+        r.fieldValues = fieldValues;
+
+        return {
+            signedAt: r.signed_at,
+            documentHash: 'sha256-' + Math.random().toString(36).substr(2, 40),
+            verification: {
+                evidenceId: 'ev-' + uuid().replace(/-/g, '').substr(0, 16),
+            },
+        };
+    },
+
+    decline: async (token) => {
+        await delay(300);
+        const r = ndaRequests.find(d => d.token === token);
+        if (r) { r.status = 'declined'; r.updated_at = new Date().toISOString(); }
+        return { success: true };
+    },
+};
+
+// ── Re-export no-op stubs for parts of the app not yet mocked ────────────────
 export const auth = {
-    register: (data) => api.post('/api/auth/register', data).then(r => r.data),
-    login: (data) => api.post('/api/auth/login', data).then(r => r.data),
-    logout: (refreshToken) => api.post('/api/auth/logout', { refreshToken }).then(r => r.data),
-    me: () => api.get('/api/auth/me').then(r => r.data),
-    createExtensionToken: (name) => api.post('/api/auth/extension-token', { name }).then(r => r.data),
-    revokeExtensionToken: (id) => api.delete(`/api/auth/extension-token/${id}`).then(r => r.data)
+    login: async () => ({}),
+    register: async () => ({}),
+    logout: async () => {},
+    me: async () => ({ id: 'owner', email: 'admin@myagency.com', full_name: 'Agency Owner' }),
 };
 
-export const documents = {
-    upload: (file, options = {}) => {
-        const fd = new FormData();
-        fd.append('document', file);
-        if (options.title) fd.append('title', options.title);
-        if (options.description) fd.append('description', options.description);
-        return api.post('/api/documents/upload', fd, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: options.onProgress
-        }).then(r => r.data);
-    },
-    list: (params) => api.get('/api/documents', { params }).then(r => r.data),
-    get: (id) => api.get(`/api/documents/${id}`).then(r => r.data),
-    getPages: (id) => api.get(`/api/documents/${id}/pages`).then(r => r.data),
-    parse: (id) => api.post(`/api/documents/${id}/parse`).then(r => r.data),
-    delete: (id) => api.delete(`/api/documents/${id}`).then(r => r.data),
-    download: (id, variant = 'signed') => {
-        return api.get(`/api/documents/${id}/download`, {
-            params: { variant }, responseType: 'blob'
-        });
-    },
-    history: (id) => api.get(`/api/documents/${id}/history`).then(r => r.data)
-};
-
+export const documents = mockDocuments;
 export const signatures = {
-    createRequests: (data) => api.post('/api/signatures/requests', data).then(r => r.data),
-    getSession: (token) => api.get(`/api/signatures/session/${token}`).then(r => r.data),
-    getSessionPages: (token) => api.get(`/api/signatures/session/${token}/pages`).then(r => r.data),
-    complete: (token, data) => api.post(`/api/signatures/session/${token}/complete`, data).then(r => r.data),
-    decline: (token, reason) => api.post(`/api/signatures/session/${token}/decline`, { reason }).then(r => r.data),
-    resend: (id, options = {}) => api.post(`/api/signatures/${id}/resend`, options).then(r => r.data),
-    cancel: (id) => api.delete(`/api/signatures/${id}`).then(r => r.data),
-    verify: (data) => api.post('/api/signatures/verify', data).then(r => r.data)
+    getSession: (token) => mockNda.getSession(token),
+    getSessionPages: async () => ({ pages: [] }),  // pages rendered via NDA text in sign page
+    complete: (token, data) => mockNda.complete(token, data),
+    decline: (token) => mockNda.decline(token),
+    createRequests: async () => ({}),
+    resend: async () => ({}),
+    cancel: async () => ({}),
+    verify: async () => ({}),
+};
+export const smtp = {
+    list: async () => [],
+    create: async () => ({}),
+    update: async () => ({}),
+    test: async () => ({}),
+    setDefault: async () => ({}),
+    delete: async () => ({}),
 };
 
-export const smtp = {
-    list: () => api.get('/api/smtp').then(r => r.data),
-    create: (data) => api.post('/api/smtp', data).then(r => r.data),
-    update: (id, data) => api.put(`/api/smtp/${id}`, data).then(r => r.data),
-    test: (id, to) => api.post(`/api/smtp/${id}/test`, { to }).then(r => r.data),
-    setDefault: (id) => api.post(`/api/smtp/${id}/set-default`).then(r => r.data),
-    delete: (id) => api.delete(`/api/smtp/${id}`).then(r => r.data)
-};
+export function setTokens() {}
+export function clearTokens() {}
+export function getAccessToken() { return 'mock-token'; }
